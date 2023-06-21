@@ -6,6 +6,7 @@ module.exports = {
   mode: 'development',
   context: __dirname,
   entry: './assets/js/index',
+  devtool: 'inline-source-map',
   output: {
     path: path.resolve('./assets/bundles/'),
     filename: '[name]-[hash].js',
