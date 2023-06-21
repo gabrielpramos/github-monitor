@@ -1,39 +1,87 @@
-import React from 'react';
+import React, { Fragment, useContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import {Field, reduxForm} from 'redux-form';
+import { Field, reduxForm } from 'redux-form';
+import { getRepositories } from '../api/CommitAPI';
+import { AppContext } from '../router';
+import { RepoCreateContainerContext } from '../containers/RepoCreateContainer';
 
-const renderField = ({
-  input, placeholder, className, type, meta: {touched, error, invalid},
-}) => (
-    <div>
-      <input
-        {...input}
-        placeholder={placeholder}
-        className={`${className} ${touched && invalid ? 'is-invalid' : ''}`}
-        type={type}
-      />
-      {touched
-        && ((error && (
-          <div className="invalid-feedback">
-            {error}
-          </div>
-        )))
-      }
-    </div>
-  );
-
-renderField.propTypes = {
-  input: PropTypes.object.isRequired,
-  placeholder: PropTypes.string.isRequired,
-  className: PropTypes.string.isRequired,
-  type: PropTypes.string.isRequired,
-  meta: PropTypes.object.isRequired,
+const validateForm = (repositoryName, username) => {
+  return repositoryName && repositoryName.startsWith(`${username}/`);
 };
+
+const validateRepository = (repository = '', repositoryList) => {
+  const [, name] = repository.split('/');
+  return !repositoryList.some(({ name: localrepositoryName }) => localrepositoryName.toLowerCase().includes(name.toLowerCase()));
+}
 
 const RepoCreateForm = (props) => {
   const {
-    successMessage, handleSubmit, pristine, submitting,
+    change,
+    successMessage, handleSubmit, submitting,
   } = props;
+  const { username } = useContext(AppContext);
+  const { localRepositories } = useContext(RepoCreateContainerContext);
+  const [submitted, setSubmitted] = useState(false);
+  const [repositoryName, setRepository] = useState('');
+  const [repositoryList, setRepositoryList] = useState([]);
+  const [showList, setShowList] = useState(false);
+  const [formValidation, setFormValidation] = useState(true);
+  const [showRepositoryError, setShowRepositoryError] = useState(false);
+
+  const repositoryNameAttribute = 'repositoryName';
+  const errorMessage = `Repository must belong to you (eg: ${username}/repo-name)`;
+
+  const { data } = getRepositories();
+
+  const filterName = (name, filterKey) => (filterKey === '' || name.includes(filterKey) || `${username}/${name}`.includes(filterKey));
+  const filterList = (list, filterKey) => {
+    const filterKeyLower = filterKey.toLowerCase();
+    return list.filter(({ name }) => {
+      const nameLower = name.toLowerCase();
+
+      return filterName(nameLower, filterKeyLower)
+    });
+  }
+
+  const filteredList = filterList(repositoryList, repositoryName).filter(({ name }) => !localRepositories.some(({ name: localrepositoryName }) => name.toLowerCase() === localrepositoryName.toLowerCase()));
+  const filteredLocalList = filterList(localRepositories, repositoryName);
+
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setRepositoryList(data);
+    }
+  }, [data]);
+
+  const onChange = (value) => {
+    change(repositoryNameAttribute, value);
+    setRepository(value);
+
+    setFormValidation(validateForm(value, username));
+  }
+
+  const onSubmit = (event) => {
+    const validRepositoryName = validateRepository(repositoryName, localRepositories);
+
+    if (formValidation && validRepositoryName) {
+      handleSubmit(event);
+      setSubmitted(true);
+    } else if (!validRepositoryName) {
+      setShowRepositoryError(!validRepositoryName);
+
+      event.preventDefault();
+    }
+  }
+
+  useEffect(() => {
+    if (submitted) {
+      onChange('');
+      setSubmitted(false);
+    }
+  }, [submitted]);
+
+  const inputComponent = () => <Fragment />
+
   return (
     <div>
       {successMessage
@@ -42,25 +90,121 @@ const RepoCreateForm = (props) => {
             Repository added successfully!
           </div>
         )}
-      <form onSubmit={handleSubmit}>
+      {showRepositoryError
+        && (
+          <div className="alert alert-danger" role="alert">
+            The repository you have inputed, has already been submitted.
+
+            <br />
+
+            Please try to submit a different repository.
+
+            <br />
+
+            Unique repository rule.
+          </div>
+        )}
+      <form onSubmit={onSubmit}>
         <div className="form-row">
           <div className="col-10">
-            <Field
-              name="name"
+            <div className='redux-input'>
+              <Field
+                placeholder="Enter the repository name, must match {user}/{repo}"
+                component={inputComponent}
+                name={repositoryNameAttribute}
+              />
+            </div>
+
+            <input
+              autoComplete="false"
               placeholder="Enter the repository name, must match {user}/{repo}"
               className="form-control"
-              component={renderField}
               type="text"
+              value={repositoryName}
+              onFocus={() => {
+                setShowList(true);
+              }}
+              onChange={({ target }) => { onChange(target.value); }}
             />
+
+            {!formValidation
+              &&
+              <div className="text-danger error-message">
+                {errorMessage}
+              </div>
+            }
           </div>
+
+          {showList &&
+            <div className='repositories-list'>
+              {!formValidation
+                &&
+                <div className="text-danger error-message">
+                  {errorMessage}
+                </div>
+              }
+
+              <button type="button" className='close-button'
+                onClick={() => {
+                  setShowList(false);
+                }}>X</button>
+
+              {
+                filteredList.length > 0 || filteredLocalList.length > 0 ?
+                  <ul>
+                    {filteredList.length > 0 &&
+                      <Fragment>
+                        <p className='repo-list-label'>
+                          Available Repositories:
+                        </p>
+
+                        {
+                          filteredList.map(({ name }) => (
+                            <li className='repo-item' key={name} onClick={() => {
+                              onChange(`${username}/${name}`);
+                              setShowList(false);
+                            }}>
+                              {name}
+                            </li>
+                          ))
+                        }
+                      </Fragment>
+                    }
+
+                    {
+                      filteredLocalList.length > 0 ?
+                        (
+                          <Fragment>
+                            <hr />
+                            <p className='selected repo-list-label'>
+                              Submitted:
+                            </p>
+                            {
+                              filteredLocalList.map(({ name }) => (
+                                <li className='repo-item selected' key={name} disabled>{name}</li>
+                              ))
+                            }
+                          </Fragment>
+                        )
+                        :
+                        (<Fragment></Fragment>)
+                    }
+
+                  </ul>
+                  :
+                  <p className='no-repo-found'>No repository found.</p>
+              }
+            </div>
+          }
+
           <div className="col-2">
-            <button disabled={pristine || submitting} className="btn btn-block btn-primary" type="submit">
+            <button disabled={repositoryName.trim().length === 0 || submitting} className="btn btn-block btn-primary" type="submit">
               Submit
             </button>
           </div>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 };
 
@@ -71,16 +215,6 @@ RepoCreateForm.propTypes = {
   successMessage: PropTypes.bool.isRequired,
 };
 
-const validate = (values) => {
-  const {username} = document.getElementById('main').dataset;
-  const errors = {};
-  if (!values.name || !values.name.startsWith(`${username}/`)) {
-    errors.name = `Repository must belong to you (eg: ${username}/repo-name)`;
-  }
-  return errors;
-};
-
 export default reduxForm({
   form: 'repoCreate',
-  validate,
 })(RepoCreateForm);
