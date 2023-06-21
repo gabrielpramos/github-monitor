@@ -1,0 +1,9 @@
+.user-name-field {
+    display: flex;
+    align-items: baseline;
+    font-weight: 500;
+}
+
+.user-name-label {
+    margin-right: 6px;
+}

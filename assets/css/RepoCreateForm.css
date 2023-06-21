@@ -1,0 +1,62 @@
+.repositories-list {
+    display: flex;
+    background-color: #fff;
+    flex-flow: column;
+    position: absolute;
+    transform: translate(5px, 40px);
+    padding: 16px 32px;
+    border-radius: 6px;
+    box-shadow: 5px 18px 15px -3px rgba(0, 0, 0, 0.3);
+    z-index: 700;
+}
+
+.selected {
+    pointer-events: none;
+    color: #28a745;
+}
+
+.repo-list-label {
+    font-weight: 600;
+}
+
+.text-danger.error-message{
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.close-button {
+    align-self: end;
+    background-color: inherit;
+    border: unset;
+    cursor: pointer;
+    font-weight: 500;
+    width: fit-content;
+}
+
+.close-button:focus {
+    outline: unset;
+}
+
+.close-button:hover {
+    font-weight: bold;
+}
+
+.repo-item {
+    cursor: pointer;
+    height: 36px;
+    font-weight: 500;
+    padding: 6px 0px;
+}
+
+.repo-item:hover {
+    background-color: #efefef;
+}
+
+.redux-input {
+    display: none;
+}
+
+.no-repo-found {
+    margin: 0;
+    padding: 32px 0;
+}
