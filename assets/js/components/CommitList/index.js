@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const CommitList = (props) => {
-  const {commits} = props;
+  const { commits } = props;
   return (
     <div>
       {commits.length !== 0 && (
@@ -16,24 +16,19 @@ const CommitList = (props) => {
               {commits.map((commit, index) => (
                 <div key={commit.sha}>
                   <div className="avatar">
-                    <img alt={commit.author} className="img-author" src={commit.avatar} />
+                    {
+                      commit.avatar ?
+                        <img alt={commit.author} className="img-author" src={commit.avatar} />
+                        :
+                        <i aria-label={commit.author} className="fa fa-github w-100 h-100 avatar-icon"></i>
+                    }
                   </div>
                   <div className="commit-details">
                     <p>
                       {commit.message}
                     </p>
                     <small className="text-muted">
-                      {commit.author}
-                      {' '}
-                      authored
-                      {' '}
-                      on
-                      {' '}
-                      {commit.repository}
-                      {' '}
-                      at
-                      {' '}
-                      {commit.date}
+                      {commit.author} authored on {commit.repository} at {commit.date}
                     </small>
                     {index !== commits.length - 1 && <hr />}
                   </div>
